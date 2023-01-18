@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@graphql-tools/utils": "^9.1.1",
+    "@graphql-tools/utils": "^9.1.4",
     "graphql": "^16.6.0"
   }
 }

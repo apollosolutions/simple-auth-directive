@@ -6,10 +6,10 @@ A simple example of how you might use an authorization directive in GraphQL. Thi
 
 ## Installation
 
-This is not included in npm. It is only available as a direct install from github
+This package is not published npm. It is only available as a direct install from GitHub.
 
 ```bash
-npm i @apollosolutions/simple-auth-directive
+npm i github:apollosolutions/simple-auth-directive
 ```
 
 ## Usage
@@ -24,6 +24,21 @@ enum Role {
   PARTNER
   USER
   UNKNOWN
+}
+```
+
+Add the directive to types or fields that you want to restrict access to
+
+```graphql
+type Query {
+  getProducts: [Product] @auth(requires: PARTNER)
+  getUser: User
+}
+
+type User @auth(requires: USER) {
+  name: String
+  accounts: [Account] @auth(requires: PARTNER)
+  ssn: String @auth(requires: ADMIN)
 }
 ```
 
