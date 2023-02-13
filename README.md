@@ -50,6 +50,15 @@ import { authDirectiveTransformer } from "@apollosolutions/financial-supergraph-
 const newSchema = authDirectiveTransformer(schema);
 ```
 
+Make sure the headers are included in the [GraphQL context](https://www.apollographql.com/docs/apollo-server/data/context#the-contextvalue-object) so that the directive can parse them. They must be saved at `context.headers`.
+
+```javascript
+const { url } = await startStandaloneServer(server, {
+    listen: { port: 4000 },
+    context: async ({ req }) => ({ headers: req.headers })
+});
+```
+
 ## Known Limitations
 
 - No custom roles
