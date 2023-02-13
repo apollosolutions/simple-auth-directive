@@ -5,6 +5,7 @@
 export const resolvers = {
     Query: {
         noAuth: () => 'hello from noAuth',
+        auth: () => 'hello from auth',
         authDefault: () => 'hello from authDefault',
         authUser: () => 'hello from authUser',
         authPartner: () => 'hello from authPartner',
