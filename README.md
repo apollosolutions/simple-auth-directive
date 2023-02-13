@@ -6,7 +6,7 @@ A simple example of how you might use an authentication and authorization direct
 
 ## Installation
 
-This package is not published npm. It is only available as a direct installation from GitHub.
+This package is NOT published npm. It is only available as a direct installation from GitHub.
 
 ```bash
 npm i github:apollosolutions/simple-auth-directive

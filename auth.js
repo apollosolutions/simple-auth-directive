@@ -9,7 +9,7 @@ import { defaultFieldResolver } from "graphql";
 
 // The header we parse to get the current role
 export const USER_HEADER = "x-user-role";
-export const AUTH_N_DIRECTIVE_NAME = "authentication";
+export const AUTH_N_DIRECTIVE_NAME = "authenticated";
 export const AUTH_Z_DIRECTIVE_NAME = "hasRole";
 
 // The order of roles is important here as higher roles have bigger indexes
@@ -17,11 +17,10 @@ export const AUTH_Z_DIRECTIVE_NAME = "hasRole";
 const ROLES = ['UNKNOWN', 'USER', 'PARTNER', 'ADMIN'];
 
 /**
- * Transform the schema resolvers for every field or object that has the @auth directive.
- * If the directive is present, first check that the header matches the required role,
- * then call the resolver as normal.
+ * Transform the schema resolvers for every field or object that has the auth directives.
+ * If the directive is present, run the requried checks, otherwise run the resolvers as normal.
  */
-const getSchemaTransformer = (getUserPermissionsFn) => {
+const getSchemaTransformer = (isAuthenticatedFn, getUserPermissionsFn) => {
   const typeDirectiveArgumentMaps = {};
   return {
     authDirectiveTransformer: (schema) =>
@@ -47,23 +46,23 @@ const getSchemaTransformer = (getUserPermissionsFn) => {
           const authZDirective =
               getDirective(schema, fieldConfig, AUTH_Z_DIRECTIVE_NAME)?.[0] ?? typeDirectiveArgumentMaps[typeName];
 
-          const requiresAuthN = authNDirective?.requires;
-          const requiresAuthZ = authZDirective?.requires;
-
           const { resolve = defaultFieldResolver } = fieldConfig;
           fieldConfig.resolve = function (source, args, context, info) {
             const contextValue = context.headers[USER_HEADER];
 
-            if (requiresAuthN && !contextValue) {
+            // Check if the field requires authentication
+            if (authNDirective && !isAuthenticatedFn(contextValue)) {
               throw new Error(`Not authenticated. The GraphQL context did not contain the ${USER_HEADER} value`);
             }
 
-            if (requiresAuthZ) {
+            // Get the required authorization role for the requested field
+            const requiredAuthZ = authZDirective?.requires;
+            if (requiredAuthZ) {
               if (!contextValue) {
                 throw new Error(`Invalid role for authorization. The GraphQL context did not contain the ${USER_HEADER} value`);
               }
               const user = getUserPermissionsFn(contextValue);
-              if (!user.hasRole(requiresAuthZ)) {
+              if (!user.hasRole(requiredAuthZ)) {
                 throw new Error(`Not authorized. The provided role does not meet schema requirements`);
               }
             }
@@ -90,4 +89,12 @@ const getUserPermissions = roleDefinedInHeader => ({
   }
 });
 
-export const { authDirectiveTransformer } = getSchemaTransformer(getUserPermissions);
+/**
+ * This function is called to validate the header value. In a real app this would parse some token
+ * and probably call and external service. For our simple demo we will just check the existence of the header.
+ */
+const isAuthenticated = (headerValue) => {
+  return !!headerValue
+};
+
+export const { authDirectiveTransformer } = getSchemaTransformer(isAuthenticated, getUserPermissions);
