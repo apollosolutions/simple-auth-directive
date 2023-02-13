@@ -30,7 +30,7 @@ type Query {
     noAuth: String
     auth: String @authenticated
     authDefault: String @authenticated @hasRole
-    authUser: String @hasRole(requires: USER)
-    authPartner: String @hasRole(requires: PARTNER)
-    authAdmin: String @hasRole(requires: ADMIN)
+    authUser: String @authenticated @hasRole(requires: USER)
+    authPartner: String @authenticated @hasRole(requires: PARTNER)
+    authAdmin: String @authenticated @hasRole(requires: ADMIN)
 }
