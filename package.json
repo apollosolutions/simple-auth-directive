@@ -6,7 +6,14 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@graphql-tools/utils": "^9.1.4",
+    "@graphql-tools/utils": "^9.2.1",
     "graphql": "^16.6.0"
+  },
+  "devDependencies": {
+    "@apollo/server": "^4.3.3",
+    "@apollo/subgraph": "^2.3.2"
+  },
+  "scripts": {
+    "test": "node tests/server.js"
   }
 }

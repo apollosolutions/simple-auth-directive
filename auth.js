@@ -39,9 +39,13 @@ const getSchemaTransformer = (directiveName, getUserFn) => {
             if (requires) {
               const { resolve = defaultFieldResolver } = fieldConfig;
               fieldConfig.resolve = function (source, args, context, info) {
-                const user = getUserFn(context.headers[USER_HEADER]);
+                const contextValue = context.headers[USER_HEADER];
+                if (!contextValue) {
+                  throw new Error(`Not authorized. The GraphQL context did not contain the ${USER_HEADER} value`);
+                }
+                const user = getUserFn(contextValue);
                 if (!user.hasRole(requires)) {
-                  throw new Error(`Not authorized. Please include the header "${USER_HEADER}" with a valid role.`);
+                  throw new Error(`Not authorized. The provided role does not meet schema requirements`);
                 }
                 return resolve(source, args, context, info);
               }
@@ -58,10 +62,10 @@ const getSchemaTransformer = (directiveName, getUserFn) => {
  * and check the user's permissions against the schema roles. For simplicity in the demo,
  * we just accept the raw value from the header as the role.
  */
-const getUserPermissions = headerRole => ({
-  hasRole: (schemaRole) => {
-    const headerIndex = ROLES.indexOf(headerRole);
-    const schemaIndex = ROLES.indexOf(schemaRole);
+const getUserPermissions = roleDefinedInHeader => ({
+  hasRole: (roleRequiredInSchema) => {
+    const headerIndex = ROLES.indexOf(roleDefinedInHeader);
+    const schemaIndex = ROLES.indexOf(roleRequiredInSchema);
     return schemaIndex >= 0 && headerIndex >= schemaIndex;
   }
 });
