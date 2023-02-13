@@ -9,49 +9,68 @@ import { defaultFieldResolver } from "graphql";
 
 // The header we parse to get the current role
 export const USER_HEADER = "x-user-role";
+export const AUTH_N_DIRECTIVE_NAME = "authenticated";
+export const AUTH_Z_DIRECTIVE_NAME = "hasRole";
 
 // The order of roles is important here as higher roles have bigger indexes
 // and determine the order of hierarchy.
 const ROLES = ['UNKNOWN', 'USER', 'PARTNER', 'ADMIN'];
 
 /**
- * Transform the schema resolvers for every field or object that has the @auth directive.
- * If the directive is present, first check that the header matches the required role,
- * then call the resolver as normal.
+ * Transform the schema resolvers for every field or object that has the auth directives.
+ * If the directive is present, run the requried checks, otherwise run the resolvers as normal.
  */
-const getSchemaTransformer = (directiveName, getUserFn) => {
+const getSchemaTransformer = (isAuthenticatedFn, getUserPermissionsFn) => {
   const typeDirectiveArgumentMaps = {};
   return {
     authDirectiveTransformer: (schema) =>
       mapSchema(schema, {
         [MapperKind.TYPE]: type => {
-          const authDirective = getDirective(schema, type, directiveName)?.[0];
-          if (authDirective) {
-            typeDirectiveArgumentMaps[type.name] = authDirective;
+          // Save the authn info to the type fields
+          const authnDirective = getDirective(schema, type, AUTH_N_DIRECTIVE_NAME)?.[0];
+          if (authnDirective) {
+            typeDirectiveArgumentMaps[type.name] = authnDirective;
           }
+
+          // Save the authz info to the type fields
+          const authzDirective = getDirective(schema, type, AUTH_Z_DIRECTIVE_NAME)?.[0];
+          if (authzDirective) {
+            typeDirectiveArgumentMaps[type.name] = authzDirective;
+          }
+
           return undefined;
         },
         [MapperKind.OBJECT_FIELD]: (fieldConfig, _fieldName, typeName) => {
-          const authDirective =
-            getDirective(schema, fieldConfig, directiveName)?.[0] ?? typeDirectiveArgumentMaps[typeName];
-          if (authDirective) {
-            const { requires } = authDirective;
-            if (requires) {
-              const { resolve = defaultFieldResolver } = fieldConfig;
-              fieldConfig.resolve = function (source, args, context, info) {
-                const contextValue = context.headers[USER_HEADER];
-                if (!contextValue) {
-                  throw new Error(`Not authorized. The GraphQL context did not contain the ${USER_HEADER} value`);
-                }
-                const user = getUserFn(contextValue);
-                if (!user.hasRole(requires)) {
-                  throw new Error(`Not authorized. The provided role does not meet schema requirements`);
-                }
-                return resolve(source, args, context, info);
-              }
-              return fieldConfig;
+          const authNDirective =
+              getDirective(schema, fieldConfig, AUTH_N_DIRECTIVE_NAME)?.[0] ?? typeDirectiveArgumentMaps[typeName];
+          const authZDirective =
+              getDirective(schema, fieldConfig, AUTH_Z_DIRECTIVE_NAME)?.[0] ?? typeDirectiveArgumentMaps[typeName];
+
+          const { resolve = defaultFieldResolver } = fieldConfig;
+          fieldConfig.resolve = function (source, args, context, info) {
+            const contextValue = context.headers[USER_HEADER];
+
+            // Check if the field requires authentication
+            if (authNDirective && !isAuthenticatedFn(contextValue)) {
+              throw new Error(`Not authenticated. The GraphQL context did not contain the ${USER_HEADER} value`);
             }
+
+            // Get the required authorization role for the requested field
+            const requiredAuthZ = authZDirective?.requires;
+            if (requiredAuthZ) {
+              if (!contextValue) {
+                throw new Error(`Invalid role for authorization. The GraphQL context did not contain the ${USER_HEADER} value`);
+              }
+              const user = getUserPermissionsFn(contextValue);
+              if (!user.hasRole(requiredAuthZ)) {
+                throw new Error(`Not authorized. The provided role does not meet schema requirements`);
+              }
+            }
+
+            // Else, run the resolvers as normal
+            return resolve(source, args, context, info);
           }
+          return fieldConfig;
         }
       })
   }
@@ -70,4 +89,12 @@ const getUserPermissions = roleDefinedInHeader => ({
   }
 });
 
-export const { authDirectiveTransformer } = getSchemaTransformer('auth', getUserPermissions);
+/**
+ * This function is called to validate the header value. In a real app this would parse some token
+ * and probably call and external service. For our simple demo we will just check the existence of the header.
+ */
+const isAuthenticated = (headerValue) => {
+  return !!headerValue
+};
+
+export const { authDirectiveTransformer } = getSchemaTransformer(isAuthenticated, getUserPermissions);
