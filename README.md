@@ -1,5 +1,11 @@
 # Simple GraphQL Auth Directive
 
+---------
+
+Apollo GraphOS now has built-in authentication and authorization features. Checkout our [launch blog post](https://www.apollographql.com/blog/announcement/backend/build-centralized-graphql-authorization-with-apollo-graphos/) for more details.
+
+---------
+
 A simple example of how you might use an authentication and authorization directive in GraphQL. This is NOT a production ready-library.
 
 **The code in this repository is experimental and has been provided for reference purposes only. Community feedback is welcome but this project may not be supported in the same way that repositories in the official [Apollo GraphQL GitHub organization](https://github.com/apollographql) are. If you need help you can file an issue on this repository, [contact Apollo](https://www.apollographql.com/contact-sales) to talk to an expert, or create a ticket directly in Apollo Studio.**
